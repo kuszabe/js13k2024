@@ -2,14 +2,10 @@ const clamp = (val, min, max) => Math.min(Math.max(val, min), max)
 
 W.reset(c);
 
+//player
 W.group({n:"p"})
 W.camera({g:"p", y:5})
-W.plane({g:"p",  rx: -90,z:50, size: 200, b:"3d2"})
-
-W.sphere({n: "nigga1" , z: -5, x: 0, y: 3, b:"#d6b8b8"})
-W.sphere({n: "nigga2" , z: 0, x: 2, y: 3, b:"#d6b8b8"})
-W.sphere({n: "nigga3" , z: -5, x: 5, y: 3, b:"#d6b8b8"})
-W.sphere({n: "nigga4" , z: 3, x: 2, y: 3, b:"#d6b8b8"})
+W.plane({g:"p",  rx: -90,z:50, size: 500, b:"3d2"})
 
 W.light({x:.5,y:-.3,z:-.5});
 
@@ -28,11 +24,12 @@ onkeyup = (e) => {
     controls[e.key] = false
 }
 
-onclick = async () => {
-    await document.body.requestPointerLock()
+onclick = () => {
+    if (!document.pointerLockElement) document.body.requestPointerLock()
 }
 
 onmousemove = (e) => {
+    if (!document.pointerLockElement) return
     player.rotationX = (player.rotationX + e.movementX) % 360
     player.rotationY = clamp(player.rotationY + e.movementY, -90, 90)
     W.camera({ry: player.rotationX, rx: player.rotationY})
