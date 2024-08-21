@@ -30,9 +30,9 @@ onclick = () => {
 
 onmousemove = (e) => {
     if (!document.pointerLockElement) return
-    player.rotationX = (player.rotationX + e.movementX) % 360
-    player.rotationY = clamp(player.rotationY + e.movementY, -90, 90)
-    W.camera({ry: player.rotationX, rx: player.rotationY})
+    player.rotationX = (player.rotationX + e.movementX * settings.sensitivity) % 360
+    player.rotationY = clamp(player.rotationY + e.movementY * settings.sensitivity, -90, 90)
+    W.camera({ ry: player.rotationX, rx: player.rotationY })
 }
 
 
@@ -45,7 +45,7 @@ let player = {
 }
 
 let settings = {
-    sensitivity: 0.05
+    sensitivity: 0.1
 }
 
 requestAnimationFrame(update)
