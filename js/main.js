@@ -1,4 +1,6 @@
+//helper functions
 const clamp = (val, min, max) => Math.min(Math.max(val, min), max)
+let distance = (x1, y1, x2, y2) => Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2))
 
 W.reset(c);
 
@@ -9,12 +11,16 @@ W.add("car", {
 });
 //player
 W.group({ n: "p" })
-W.camera({ g: "p", y: 5 })
+W.camera({ g: "p", y: 3.2 })
 W.plane({ g: "p", rx: -90, z: 50, size: 500, b: "3d2" })
 
 W.light({ x: .5, y: -.3, z: -.5 });
 
-W.car({ size: 10, rx: -90, b:"#a80b0b" })
+W.group({ n: "car" })
+
+W.car({ g: "car", n: "carbody", size: 10, rx: -90, x: -2.3, z: 6, b: "#a80b0b" })
+W.cube({ n: "h", size: 10, x: 0, y: 0 })
+// W.cube({g:"car", size:0.1})  
 
 let controls = {
     w: false,
@@ -46,34 +52,110 @@ onmousemove = (e) => {
 let player = {
     rotationX: 0,
     rotationY: 0,
-    posX: 0,
-    posY: 0,
-    speed: 20
+    x: 0,
+    y: 0,
+    speed: 0.5,
+    currentCar: null
 }
 
 let settings = {
-    sensitivity: 0.1
+    sensitivity: -0.1,
 }
 
-requestAnimationFrame(update)
+
+
+//i was bored because i didn't understand the matrix math
+class AndrewTate {
+    escape(matrix) {
+        return "-$90"
+    }
+}
+
+let maincar = {
+    // matrix: new DOMMatrix().rotate(360-90,360-90,0).scale(10,10,10),
+    // matrix: carMatrix,
+    x: 0,
+    y: 0,
+    velocity: 0,
+    rotation: 20,
+    handling: 0.05,
+    acceleration: 0.02,
+    drag: 1.005,
+    name: "car",
+    turn: 0
+}
+
+function moveTowardsValue(target, current, acceleration) {
+    if (Math.abs(target - current) < acceleration) return target
+    if (target > current) current += acceleration
+    else if (target < current) current -= acceleration
+    return current
+}
+
+function enterCar(car) {
+    // W.move({
+    //     n:"p",
+    //     g:car.name,
+    // })
+    player.currentCar = car
+}
+
+//updates the car
+//takes in a car object, like maincar, so that cars can be swapped
+function updateCar(car) {
+    if (player.currentCar == car) {
+        //car acceleration
+        car.velocity += (controls.w - controls.s) * car.acceleration
+
+        //car rotation
+        car.turn = moveTowardsValue((controls.a - controls.d) * 5, car.turn, car.handling)
+        player.rotationX += car.turn * car.velocity
+        W.camera({ ry: player.rotationX })
+        car.rotation += car.turn * car.velocity
+    }
+    car.velocity = clamp(car.velocity / car.drag, 0, 20)
+    if (car.velocity < 0.01) car.velocity = 0
+    W.move({
+        n: "car",
+        x: car.x -= car.velocity * Math.sin(car.rotation * Math.PI / 180),
+        z: car.y -= car.velocity * Math.cos(car.rotation * Math.PI / 180),
+        ry: car.rotation,
+    })
+    if (player.currentCar == car) {
+        //for some reason when grouping the player with the car, it slowly shifts off from the right position, so i set the players position to the car manually
+        W.move({
+            n: "p",
+            x: car.x,
+            z: car.y,
+        })
+    }
+}
+
 
 function update() {
-
-    if (controls.w || controls.s) {
-        W.move({
-            n: "p",
-            z: player.posX -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) / player.speed,
-            x: player.posY -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) / player.speed
-        });
+    if (!player.currentCar) {
+        if (controls.w || controls.s) {
+            W.move({
+                n: "p",
+                z: player.x -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) * player.speed,
+                x: player.y -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) * player.speed
+            });
+        }
+        if (controls.a || controls.d) {
+            W.move({
+                n: "p",
+                z: player.x -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) * player.speed,
+                x: player.y -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) * player.speed
+            });
+        }
     }
-    if (controls.a || controls.d) {
-        W.move({
-            n: "p",
-            z: player.posX -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) / player.speed,
-            x: player.posY -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) / player.speed
-        });
-    }
 
+    updateCar(maincar)
 
     requestAnimationFrame(update)
 }
+
+enterCar(maincar)
+
+//start the game loop
+requestAnimationFrame(update)
