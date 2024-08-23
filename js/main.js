@@ -27,6 +27,7 @@ let controls = {
     s: false,
     a: false,
     d: false,
+    e: false
 }
 
 onkeydown = (e) => {
@@ -54,7 +55,7 @@ let player = {
     rotationY: 0,
     x: 0,
     y: 0,
-    speed: 0.5,
+    speed: 0.2,
     currentCar: null
 }
 
@@ -79,8 +80,9 @@ let maincar = {
     velocity: 0,
     rotation: 20,
     handling: 0.05,
-    acceleration: 0.02,
+    acceleration: 0.005,
     drag: 1.005,
+    steeringpower:0.5,
     name: "car",
     turn: 0
 }
@@ -98,23 +100,40 @@ function enterCar(car) {
     //     g:car.name,
     // })
     player.currentCar = car
+    useCoolDown = true
+    setTimeout(() => useCoolDown = false, 100)
+}
+
+let useCoolDown = false
+
+function leaveCar() {
+    if (!player.currentCar) return
+    player.x = player.currentCar.x + 5
+    player.y = player.currentCar.y + 5
+    player.currentCar = null
+    W.move({n:"p", x:player.x, z:player.y})
 }
 
 //updates the car
 //takes in a car object, like maincar, so that cars can be swapped
 function updateCar(car) {
+    if (distance(player.x, player.y, car.x, car.y) < 2 && controls.e && !useCoolDown) enterCar(car)
     if (player.currentCar == car) {
+        if (!useCoolDown && controls.e) leaveCar()
         //car acceleration
-        car.velocity += (controls.w - controls.s) * car.acceleration
+        car.velocity += (controls.w - controls.s) * car.acceleration / Math.max(Math.abs(car.turn), 1)
 
         //car rotation
         car.turn = moveTowardsValue((controls.a - controls.d) * 5, car.turn, car.handling)
-        player.rotationX += car.turn * car.velocity
+        player.rotationX = (player.rotationX + car.turn * Math.min(car.velocity,1)) % 360
         W.camera({ ry: player.rotationX })
-        car.rotation += car.turn * car.velocity
+        car.rotation += car.turn * Math.min(car.velocity, 1)
     }
-    car.velocity = clamp(car.velocity / car.drag, 0, 20)
-    if (car.velocity < 0.01) car.velocity = 0
+        car.velocity = clamp((car.velocity / (controls.w && player.currentCar == car ? 1 : car.drag)), -0.3, 2)
+        if (Math.abs(0 - car.velocity) < 0.003) car.velocity = 0
+    
+
+
     W.move({
         n: "car",
         x: car.x -= car.velocity * Math.sin(car.rotation * Math.PI / 180),
@@ -137,15 +156,15 @@ function update() {
         if (controls.w || controls.s) {
             W.move({
                 n: "p",
-                z: player.x -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) * player.speed,
-                x: player.y -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) * player.speed
+                x: player.x -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) * player.speed,
+                z: player.y -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) * player.speed
             });
         }
         if (controls.a || controls.d) {
             W.move({
                 n: "p",
-                z: player.x -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) * player.speed,
-                x: player.y -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) * player.speed
+                x: player.x -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) * player.speed,
+                z: player.y -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) * player.speed
             });
         }
     }
