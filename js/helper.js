@@ -31,3 +31,7 @@ Vec2.prototype = {
     distance(vec) {return Math.sqrt(Math.pow(this.x - vec.x, 2) + Math.pow(this.y - vec.y, 2))},
     perp() {return new Vec2(this.y, -this.x)}
 }
+
+Vec2.fromPoint = function (vec) {
+    return new Vec2(vec.x, vec.y)
+}

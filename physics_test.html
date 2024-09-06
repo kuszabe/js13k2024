@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physics test</title>
     <script src="js/helper.js"></script>
 </head>
+
 <body>
     <script>
         let c = document.createElement("canvas")
@@ -14,7 +16,7 @@
         document.body.appendChild(c)
         let ctx = c.getContext("2d")
         function polygon(pos, points = []) {
-            return {pos,points}
+            return { pos, points }
         }
 
         ctx.fillStyle = "black"
@@ -52,31 +54,41 @@
         function drawIndicator(pos, w = 10, h = 10) {
             let ogColor = ctx.fillStyle
             ctx.fillStyle = "green"
-            ctx.fillRect(pos.x - w/2, pos.y - h/2, w, h)
-            ctx.fillStyle = ogColor 
+            ctx.fillRect(pos.x - w / 2, pos.y - h / 2, w, h)
+            ctx.fillStyle = ogColor
         }
 
 
 
-        let polygon1 = polygon(new Vec2(100,50), [new Vec2(0,0), new Vec2(100,0), new Vec2(100,100), new Vec2(0,100)])
-        
-        let polygon2 = polygon(new Vec2(90,75), [new Vec2(0,0), new Vec2(50,0), new Vec2(50,50), new Vec2(0,50)])
+        let polygon1 = polygon(new Vec2(), [new Vec2(0, 0), new Vec2(10, 0), new Vec2(10, 10), new Vec2(0, 10)])
 
-        drawPolygon(polygon1)
-        drawPolygon(polygon2)
+        let polygon2 = polygon(new Vec2(90, 75), [new Vec2(0, 0), new Vec2(100, 0), new Vec2(100, 100), new Vec2(0, 100)])
 
-        //make the axes
-        polygon1.axes = []
-        polygon1.points.forEach((value, index) => {
-            let dir
-            if (index == polygon1.points.length - 1) {
-                dir = polygon1.points[0]
-            } else {
-                dir = polygon1.points[index + 1]
-            }
-            dir = dir.sub(value).perp().normal().abs()
-            if (!polygon1.axes.find((val) => val.eq(dir))) polygon1.axes.push(dir)
-        })
+        let kinetic = [
+            polygon2,
+            polygon(new Vec2(200,100) ,[new Vec2(0, 0), new Vec2(100, 0), new Vec2(100, 40), new Vec2(0, 120)])
+        ]
+
+        function calculateAxes(poly) {
+            //make the axes
+            let axes = []
+            poly.points.forEach((value, index) => {
+                let dir
+                if (index == poly.points.length - 1) {
+                    dir = poly.points[0]
+                } else {
+                    dir = poly.points[index + 1]
+                }
+                dir = dir.sub(value).perp().normal()
+                axes.push(dir)
+            })
+            return axes
+        }
+
+        polygon1.axes = calculateAxes(polygon1)
+        for (const poly of kinetic) {
+            poly.axes = calculateAxes(poly)
+        }
 
         function project(axis, polygon_1, polygon_2) {
 
@@ -94,7 +106,7 @@
 
         function testAxis(axis, polygon_1, polygon_2) {
             let [proj1, proj2] = project(axis, polygon_1, polygon_2)
-            
+
             //get min and max values
             let min1 = Math.min(...proj1)
             let max1 = Math.max(...proj1)
@@ -111,15 +123,15 @@
                 } else return dist2
             } else return false
         }
-        
+
         function drawAxis(axis1) {
-            
+
             drawLine([polygon1.pos.add(axis1.scale(-200)), polygon1.pos.add(axis1.scale(500))])
-            
+
             let [projection, projection2] = project(axis1, polygon1, polygon2)
-    
+
             projection = projection.concat(projection2)
-    
+
             //draw the projected vertices
             projection.forEach(val => {
                 let pos = polygon1.pos.add(axis1.scale(val))
@@ -128,23 +140,79 @@
         }
 
         function testPolygons(poly1, poly2) {
-            let MTV = {magnitude: Infinity}
+            let MTV = { magnitude: Infinity }
             for (const axis of poly1.axes) {
                 let test = testAxis(axis, poly1, poly2)
                 if (!test) return false
-                else if (test < MTV.magnitude) MTV = {magnitude:test, dir:axis}
+                else if (Math.abs(test) < Math.abs(MTV.magnitude)) MTV = { magnitude: test, dir: axis }
+            }
+            for (const axis of poly2.axes) {
+                let test = testAxis(axis, poly1, poly2)
+                if (!test) return false
+                else if (Math.abs(test) < Math.abs(MTV.magnitude)) MTV = { magnitude: test, dir: axis }
             }
             return MTV.dir.scale(MTV.magnitude)
         }
 
-        let collision = testPolygons(polygon1, polygon2)
-        if (collision) {
-            polygon1.pos = polygon1.pos.add(collision)
-            ctx.fillStyle = "yellow"
-            ctx.globalAlpha = 0.5
-            drawPolygon(polygon1)
+        let controls = {
+            w: false,
+            s: false,
+            a: false,
+            d: false,
         }
+
+        onkeydown = (e) => {
+            controls[e.key] = true
+        }
+
+        onkeyup = (e) => {
+            controls[e.key] = false
+        }
+
+
+        
+        
+        function update() {
+            ctx.clearRect(0, 0, 500, 250)
+            
+            //transforming the points of the polygon
+            let transformMatrices = polygon2.points.map(element => {
+                return new DOMMatrix().translate(50,50).rotate(0,0,1).translate(-50,-50)
+            });
+
+            polygon2.points.forEach((e, i) => {
+                let {x,y} = DOMPoint.fromPoint(e).matrixTransform(transformMatrices[i])
+                let newpoint = new Vec2(x,y)
+                polygon2.points[i] = newpoint
+            })
+
+            polygon2.axes = calculateAxes(polygon2)
+
+            //movement
+            let movement = new Vec2(controls.d - controls.a, controls.s - controls.w).scale(5)
+            polygon1.pos = polygon1.pos.add(movement)
+
+            //testing collisions
+            for (const poly of kinetic) {
+                let collision = testPolygons(polygon1, poly)
+                if (collision) {
+                    polygon1.pos = polygon1.pos.add(collision)
+                }
+            }
+
+            ctx.fillStyle = "black"
+            drawPolygon(polygon1)
+            ctx.fillStyle = "red"
+            kinetic.forEach(drawPolygon)
+            ctx.fillStyle = "black"
+
+            requestAnimationFrame(update)
+        }
+
+        requestAnimationFrame(update)
+
 
     </script>
 </body>
+
 </html>
