@@ -5,9 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>js13k</title>
     <script src="js/w.js"></script>
+    <script src="js/helper.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/gen.js"></script>
+    <script src="js/items.js"></script>
     <script defer src="js/main.js"></script>
 </head>
 <body>
+    <style>
+        ui {
+            position: absolute;
+            font-size: xx-large;
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        }
+        img {
+            image-rendering: pixelated;
+        }
+    </style>
     <canvas id="c" height="900", width="1600" style="margin: 0px; position: absolute; top: 0px; left: 0px; height: 100%;"></canvas>
+    <ui id="kmcounter"></ui>
+    <img id="meatsource" src="assets/Meat.png" hidden>
 </body>
 </html>
