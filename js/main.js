@@ -1,18 +1,30 @@
+c.height = innerHeight
+c.width = innerWidth
+
+let game = false
+
+let renderdistance = 1000
+
+onresize = () => {
+    c.height = innerHeight
+    c.width = innerWidth
+}
+
 W.reset(c)
 
-W.clearColor("#00000000")
+W.clearColor("#87CEEB")
 
-W.camera({ y: 3, fov: 50 })
+W.camera({ y: 20, x: -20, ry: -90, fov: 45 })
 
-W.plane({ n: "ground", size: 500, rx: -90, b: "#C2B280" })
+W.plane({ n: "ground", size: 1200, rx: -90, b: "#C2B280" })
 
-W.ambient(1)
+W.ambient(0.7)
 
-W.light({ x: 0.5, y: .5, z: 0.7 })
+W.light({ x: -0.3, y: -.5, z: -0.3 })
 
 // W.plane({g:"camera", z:-1, rx:-20, y:-1, size:2, ns:1, t:upscaleImage(meatsource)})
 
-const nothingAction = { importance: Infinity, callback: () => {console.log("hello")}, text: "" }
+const nothingAction = { importance: Infinity, callback: () => { console.log("hello") }, text: "" }
 
 const leaveCarAction = { text: "press E to leave the car", callback: leaveCar, importance: -1 }
 
@@ -38,10 +50,11 @@ onkeyup = (e) => {
 }
 
 onclick = () => {
-    if (!document.pointerLockElement) document.body.requestPointerLock()
+    if (!document.pointerLockElement && game) document.body.requestPointerLock()
     if (player.equippedItem) {
         console.log("megnyomtak")
         player.equippedItem.use()
+        updateHotbar()
     }
 }
 
@@ -64,7 +77,9 @@ const player = {
         hungerdisplay.innerText = this.hunger
         if (this.hunger == 0) hungerdisplay.innerText = "you died"
     },
-    equippedItem: null
+    equippedItem: null,
+    selectedInventorySlot: 0,
+    inventory: []
 }
 
 setInterval(() => {
@@ -87,7 +102,7 @@ class AndrewTate {
 }
 
 //road that moves with the player on the x axis
-W.plane({ n: "road", w: 500, h: 20, y: 0.1, rx: -90, b: "#2c2c2c" })
+W.plane({ n: "road", w: 1000, h: 20, y: 0.1, rx: -90, b: "#2c2c2c" })
 
 //#region car
 W.add("car", {
@@ -100,18 +115,41 @@ W.group({ n: "car" })
 
 W.car({ g: "car", n: "carbody", size: 10, rx: -90, x: -2.3, z: 6, b: "#380303" })
 
-let maincar = {
+W.group({ n: "sec" })
+
+W.car({ g: "sec", n: "seccarbody", size: 10, rx: -90, x: -2.3, z: 6, b: "#2310b1" })
+
+const maincar = {
     pos: new Vec2(),
     velocity: 0,
     rotation: 20,
     handling: 0.1,
     acceleration: 0.003,
-    drag: 1.005,
+    drag: 1.008,
+    fuelconsumption: 0.1,
     name: "car",
-    turn: 0
+    turn: 1,
+    fuel: 10,
+    maxFuel: 20,
+    maxVelocity: 0.6
 }
 
-let cars = [maincar]
+const secondarycar = {
+    pos: new Vec2(200, 0),
+    velocity: 0,
+    rotation: 90,
+    handling: 0.05,
+    acceleration: 0.005,
+    drag: 1.005,
+    name: "sec",
+    turn: 0,
+    fuelconsumption: 3,
+    fuel: 10,
+    maxFuel: 60,
+    maxVelocity: 0.7,
+}
+
+let cars = [maincar, secondarycar]
 
 function moveTowardsValue(target, current, acceleration) {
     if (Math.abs(target - current) < acceleration) return target
@@ -135,23 +173,36 @@ function leaveCar() {
     player.currentCar = null
 }
 
+// setInterval(() => {
+//     if (player.currentCar) {
+//         zzfx(1,0,200,.01,0,0,1,1,.3,0,0,0,.01,1.8,40,0,0,1,1,.17,0); // Engine sound
+//     }
+// }, 1000)
+
 //updates the car
 //takes in a car object, like maincar, so that cars can be swapped
 function updateCar(car) {
     if (player.currentCar == car) {
         currentAction = leaveCarAction
+
+
         //car acceleration
-        car.velocity += (controls.w - controls.s) * car.acceleration / Math.max(Math.abs(car.turn), 1)
+        if (car.fuel > 0) car.velocity += (controls.w - controls.s) * car.acceleration / Math.max(Math.abs(car.turn), 1)
+        else car.fuel = 0
+
+        car.fuel -= Math.abs(car.velocity / 60 * fpsfix * car.fuelconsumption)
+
+        carinfo.innerText = car.fuel.toFixed(2) + "/" + car.maxFuel
 
         //car rotation
-        car.turn = moveTowardsValue((controls.a - controls.d) * 10, car.turn, car.handling)
+        car.turn = moveTowardsValue((controls.a - controls.d) * 10, car.turn, car.handling * fpsfix)
         player.rotationX = (player.rotationX + car.turn * Math.min(car.velocity, 0.5)) % 360
         car.rotation += car.turn * Math.min(car.velocity, 0.5)
     } else if (car.pos.distance(player.pos) < 4 && car.pos.distance(player.pos) < currentAction.importance) currentAction = { text: "Press E to enter the car", callback: () => enterCar(car), importance: car.pos.distance(player.pos) }
-    car.velocity = clamp((car.velocity / (controls.w && player.currentCar == car ? 1 : car.drag)), -0.1, 1)
-    if (Math.abs(0 - car.velocity) < car.acceleration * 0.9) car.velocity = 0
-    car.pos.x -= car.velocity * Math.sin(car.rotation * Math.PI / 180)
-    car.pos.y -= car.velocity * Math.cos(car.rotation * Math.PI / 180)
+    car.velocity = clamp((car.velocity / (controls.w && player.currentCar == car ? 1 : car.drag)), -0.1, car.maxVelocity)
+    if (Math.abs(0 - car.velocity) < 0.001) car.velocity = 0
+    car.pos.x -= car.velocity * Math.sin(car.rotation * Math.PI / 180) * fpsfix
+    car.pos.y -= car.velocity * Math.cos(car.rotation * Math.PI / 180) * fpsfix
 
     //transforming the points of the polygon
     let transformMatrices = car.collider.originalpoints.map(() => {
@@ -160,14 +211,12 @@ function updateCar(car) {
 
     car.collider.originalpoints.forEach((e, i) => car.collider.points[i] = Vec2.fromPoint(DOMPoint.fromPoint(e).matrixTransform(transformMatrices[i])))
 
-    car.collider.points.forEach((point, index) => {
-        W.move({ n: "carmarker" + index, x: point.x + car.pos.x, z: point.y + car.pos.y })
-    })
-
     car.collider.axes = calculateAxes(car.collider)
 
-    for (const poly of kinetic) {
-        maincar.collider.pos = car.pos
+    const bodies = kinetic.filter(val => car.pos.distance(val.pos) < 100)
+
+    for (const poly of bodies) {
+        car.collider.pos = car.pos
         let collision = testPolygons(car.collider, poly)
         if (collision) {
             //TODO: measure angle between the car and the MTV and slow down the car based on that, so it will come to a complete stop on a frontal colloison but can still move when scratching a wall sideways
@@ -177,53 +226,97 @@ function updateCar(car) {
         }
     }
 
-
-    W.move({ n: car.name, ry: car.rotation, x: car.pos.x, z: car.pos.y })
-
     if (player.currentCar == car) {
         //for some reason when grouping the player with the car, it slowly shifts off from the right position, so I set the player's position to the car manually
         player.pos.x = car.pos.x
         player.pos.y = car.pos.y
     }
+
+    W.move({ n: "camera", x: player.pos.x, z: player.pos.y, ry: player.rotationX, rx: player.rotationY })
+
+    W.move({ n: car.name, ry: car.rotation, x: car.pos.x, z: car.pos.y })
+
+
+
 }
 
 //#endregion car
 
+let time = 0
 
-function update() {
-    updateWorld()
+let lastFrame = 0
 
-    kmcounter.innerText = Math.round(player.pos.x / 1000)
+let deltaTime
+
+
+//
+let fpsfix
+
+let disasterTriggerPoint = 1300
+
+function update(timeStamp) {
+    deltaTime = timeStamp - lastFrame
+    lastFrame = timeStamp
+
+    fpsfix = deltaTime / 16
+
+    //fpsfix is a variable that should be 1 when the game is running at 60 fps
+    //multiplying every movement with fpsfix fixes the game slowing down or speeding up when running at different framerates
+
+    time++
+
+
+    kmcounter.innerText = Math.round(player.pos.x / 2) + " m"
+    if ((player.pos.x / 2) > disasterTriggerPoint) {
+        triggerDisaster()
+        disasterTriggerPoint += 1300
+    }
 
     if (controls.w || controls.s) {
-        player.pos.x -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) * player.speed
-        player.pos.y -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) * player.speed
+        player.pos.x -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) * player.speed * fpsfix
+        player.pos.y -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) * player.speed * fpsfix
     }
     if (controls.a || controls.d) {
-        player.pos.x -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) * player.speed
-        player.pos.y -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) * player.speed
+        player.pos.x -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) * player.speed * fpsfix
+        player.pos.y -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) * player.speed * fpsfix
     }
 
     W.move({ n: "ground", x: player.pos.x, z: player.pos.y })
     W.move({ n: "road", x: player.pos.x, })
 
-    cars.forEach(updateCar)
 
-    physicsUpdate()
-
-    if (currentAction.importance >= 0 && !player.equippedItem) {
+    if (currentAction.importance >= 0) {
         items.forEach((item) => {
             if (item.dropped) {
                 let dist = player.pos.distance(item.pos)
                 if (dist < currentAction.importance && dist < 2) {
-                    currentAction = {text: "press E to pick up" + item.displayName, callback: () => item.equip(), importance: 2}
+                    currentAction = { text: "press E to pick up " + item.displayName, callback: () => {
+                        item.pickUp()
+                        updateHotbar()
+                    }, importance: 2 }
                 }
             }
         })
     }
 
+    // if (time % 100 == 0) zzfx(1,0,200,.01,0,0,1,1,.3,0,0,0,.01,1.8,40,0,0,1,10,.17,0); // Engine sound
+
+    for (let i = 0; i < 7; i++) {
+        if (controls[i + 1]) {
+            player.selectedInventorySlot = i
+            if (player.inventory[i]) {
+                player.inventory[i].equip()
+            } else {
+                W.delete(player.equippedItem?.name + "held")
+                player.equippedItem = null
+            }
+            updateHotbar()
+        }
+    }
+
     if (player.equippedItem && controls.q) {
         player.equippedItem.drop(player.pos)
+        updateHotbar()
     }
     controls.q = false
 
@@ -232,17 +325,40 @@ function update() {
     controls.e = false
     currentAction = nothingAction
 
+    cars.forEach(updateCar)
+    physicsUpdate()
 
-    requestAnimationFrame(update)
+    updateWorld()
+    if (game) requestAnimationFrame(update)
 }
 
 generateWorld()
 
 physicsInit()
 
+let meat = new Meat
+meat.drop(new Vec2(-5, 2))
+
 let meat2 = new Meat
-meat2.drop(new Vec2(-5,0))
+meat2.drop(new Vec2(-5, 0))
 
-//start the game loop
-requestAnimationFrame(update)
+start.onclick = () => {
+    mainmenu.style.display = "none"
 
+    hud.style.display = "block"
+
+    km.style.display = "flex"
+
+    game = true
+    
+    W.camera({ y: 3, fov: 45 })
+
+    updateHotbar()
+
+    bottombar.style.display = "flex"
+
+    //start the game loop
+    requestAnimationFrame(update)
+
+
+}

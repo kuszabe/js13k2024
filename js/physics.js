@@ -1,19 +1,19 @@
 let kinetic = []
 
+let place
+
 function physicsInit() {
-    player.collider = polygon(player.pos, [new Vec2(-0.5, -0.5), new Vec2(0.5, -0.5), new Vec2(0.5, 0.5), new Vec2(-0.5, 0.5)])
+    player.collider = polygon(player.pos, [new Vec2(-1, -1), new Vec2(1, -1), new Vec2(1, 1), new Vec2(-1, 1)])
     player.collider.axes = calculateAxes(player.collider)
 
-    maincar.collider = polygon(maincar.pos, [new Vec2(2.3, -4), new Vec2(-2.3, -4), new Vec2(-2.3, 6), new Vec2(2.3, 6)])
-    maincar.collider.axes = calculateAxes(maincar.collider)
+    for (const car of cars) {
+        car.collider = polygon(car.pos, [new Vec2(2.3, -4), new Vec2(-2.3, -4), new Vec2(-2.3, 6), new Vec2(2.3, 6)])
+        car.collider.axes = calculateAxes(car.collider)
+    
+        car.collider.originalpoints = JSON.parse(JSON.stringify(car.collider.points))
+    }
 
-    maincar.collider.points.forEach((point, index) => {
-        W.sphere({n:"carmarker" + index, x:point.x + maincar.pos.x, z:point.y + maincar.pos.y})
-    })
-
-    maincar.collider.originalpoints = JSON.parse(JSON.stringify(maincar.collider.points))
-
-    W.cube({x:10, size:10, b:"#3511d3"})
+    W.cube({x:1000, size:50, b:"#3511d3"})
     kinetic.push(polygon(new Vec2(10,0), [new Vec2(), new Vec2(10,0), new Vec2(10,10), new Vec2(0,10)]))
 
     for (const poly of kinetic) {
@@ -24,18 +24,47 @@ function physicsInit() {
 function physicsUpdate() {
     player.collider.pos = player.pos
     
+    //if the player is in the car it is moved in  the car update
+
     if (!player.currentCar) {
-        for (const poly of kinetic) {
-            let collision = testPolygons(player.collider, poly)
-            if (collision) {
-                player.pos = player.pos.add(collision)
-                if (poly.callback) poly.callback(collision)
+        if (!place) {
+            const bodies = kinetic.filter(val => player.pos.distance(val.pos) < 30)
+            for (const poly of bodies) {
+                let collision = testPolygons(player.collider, poly)
+                if (collision) {
+                    player.pos = player.pos.add(collision)
+                    if (poly.callback) poly.callback(collision)
+                }
+            }
+        } else {
+            for (const poly of place.bodies) {
+                let collision = testPolygons(player.collider, poly)
+                if (collision) {
+                    player.pos = player.pos.add(collision)
+                    if (poly.callback) poly.callback(collision)
+                }
+            }
+
+            W.sphere({n:"min", x:place.min.x, z:place.min.y})
+            W.sphere({n:"max", x:place.max.x, z:place.max.y})
+
+            if (player.pos.x < place.min.x) {
+                player.pos.x += place.min.x - player.pos.x
+            }
+            if (player.pos.y < place.min.y) {
+                player.pos.y += place.min.y - player.pos.y
+            }
+            if (player.pos.x > place.max.x) {
+                player.pos.x += place.max.x - player.pos.x
+            }
+            if (player.pos.y > place.max.y) {
+                player.pos.y += place.max.y - player.pos.y
             }
         }
+        //move everything
+        W.move({n:"camera", x:player.pos.x, z:player.pos.y,  ry: player.rotationX, rx: player.rotationY})
     }
 
-    //move everything
-    W.move({n:"camera", x:player.pos.x, z:player.pos.y,  ry: player.rotationX, rx: player.rotationY})
 
 }
 
@@ -46,8 +75,8 @@ function polygon(pos, points = []) {
 }
 
 function rect(pos, size) {
-    if (typeof size == "number")  return polygon(pos, [new Vec2(), new Vec2(size,0), new Vec2(size, size), new Vec2(0, size)])
-    else if (size instanceof Vec2) return polygon(pos, [new Vec2(), new Vec2(size.x,0), new Vec2(size.x, size.y), new Vec2(0, size.y)])
+    if (size instanceof Vec2) return polygon(pos, [new Vec2(), new Vec2(size.x,0), new Vec2(size.x, size.y), new Vec2(0, size.y)])
+    else if (typeof size == "number") return polygon(pos, [new Vec2(), new Vec2(size,0), new Vec2(size, size), new Vec2(0, size)])
     else throw new Error("Size must be a number or a Vec2");   
 }
 
