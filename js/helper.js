@@ -1,6 +1,36 @@
 //helper functions
 const clamp = (val, min, max) => Math.min(Math.max(val, min), max)
 
+function radtodeg(r) {
+    return r * 180 / Math.PI
+}
+
+function moveTowardsValue(target, current, acceleration) {
+    if (Math.abs(target - current) < acceleration) return target
+    if (target > current) current += acceleration
+    else if (target < current) current -= acceleration
+    return current
+}
+
+function moveTowardsValueLoop(target, current, acceleration, loop) {
+    if (Math.abs(target - current) < acceleration) return target
+    if (Math.abs(target - current) > Math.abs(target+loop - current)) {
+        console.log("before", current, target)
+        current += acceleration
+        current = current % loop
+        console.log("after", current, target)
+    }
+    else if (Math.abs(target - current) > Math.abs((loop-target) - current)) {
+        console.log("before", current, target)
+        current -= acceleration
+        current = loop + current
+        console.log("after", current, target)
+    }
+    else if (target > current) current += acceleration
+    else if (target < current) current -= acceleration
+    return current
+}
+
 function Vec2(x = 0, y = 0) {
     this.x = x
     this.y = y
@@ -29,7 +59,10 @@ Vec2.prototype = {
     },
     eq(vec) {return this.x == vec.x && this.y == vec.y},
     distance(vec) {return Math.sqrt(Math.pow(this.x - vec.x, 2) + Math.pow(this.y - vec.y, 2))},
-    perp() {return new Vec2(this.y, -this.x)}
+    perp() {return new Vec2(this.y, -this.x)},
+    angle(vec) {
+        return radtodeg(Math.atan2(this.y, this.x))
+    }
 }
 
 Vec2.fromPoint = function (vec) {
