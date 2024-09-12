@@ -62,7 +62,7 @@ function physicsUpdate() {
             }
         }
         //move everything
-        W.move({n:"camera", x:player.pos.x, z:player.pos.y,  ry: player.rotationX, rx: player.rotationY})
+        W.camera({x:player.pos.x, z:player.pos.y,  ry: player.rotationX, rx: player.rotationY})
     }
 
 

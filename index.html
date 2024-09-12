@@ -1,33 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>js13k</title>
+    <script src="js/disasters.js"></script>
+    <script src="js/droids.js"></script>
     <script src="js/w.js"></script>
     <script src="js/helper.js"></script>
     <script src="js/physics.js"></script>
     <script src="js/gen.js"></script>
     <script src="js/items.js"></script>
+    <script src="js/zzfx.js"></script>
     <script defer src="js/main.js"></script>
 </head>
+
 <body>
     <style>
-        ui {
-            position: absolute;
+        body {
             font-size: xx-large;
             font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+            margin: 0px;
+            color: white;
         }
+
+        ui {
+            position: absolute;
+            display: none;
+        }
+
         img {
             image-rendering: pixelated;
+            display: none;
         }
+
+        #mainmenu {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            text-align: center;
+        }
+
+        km {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: start;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            text-align: center;
+        }
+
+
+        #hotbar {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: end;
+            width: 100%;
+        }
+        #hotbar > div {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(63, 63, 63, 0.533);
+            margin: 10px;
+            font-size: large;
+        }
+
+        #bottombar {
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            justify-content: end;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+        }
+
     </style>
-    <canvas id="c" height="900", width="1600" style="margin: 0px; position: absolute; top: 0px; left: 0px; height: 100%;"></canvas>
-    <ui>
-        <span id="kmcounter"></span><br/>
-        <span id="hungerdisplay"></span><br/>
-        <span id="tooltip"></span>
+    <canvas id="c" style="position: absolute; height: 100%;"></canvas>
+    <ui id="hud">
+        Hunger: <span id="hungerdisplay"></span>/10<br/>
+        Health: <span id="healthdisplay"></span>/10<br/>
+        <span id="carinfo"></span>
     </ui>
-    <img id="meatsource" src="assets/Meat.png" hidden>
+    <km id="km">
+        <span id="kmcounter"></span>
+        <span id="disaster"></span>
+    </km>
+    <div id="bottombar">
+        <span id="tooltip"></span>
+        <div id="hotbar">
+            <div id="hotbar1">hello</div>
+            <div id="hotbar2">hello</div>
+            <div id="hotbar3">hello</div>
+            <div id="hotbar4">hello</div>
+            <div id="hotbar5">hello</div>
+        </div>
+    </div>
+    <div id="mainmenu">
+        <h1>13K meters</h1>
+        <div id="start">Start Game</div>
+    </div>
+    <img id="smokesource2" src="assets/smoke-2.png">
+    <img id="meatsource" src="assets/Meat.png">
+    <img id="wrench" src="assets/wrench.png">
+    <img id="smokesource1" src="assets/smoke-1.png">
 </body>
+
 </html>

@@ -1,10 +1,10 @@
-terser js/w.js js/helper.js js/main.js js/physics.js js/gen.js --output dist/bundle.js --compress toplevel --mangle toplevel --toplevel
+terser .\js\disasters.js .\js\droids.js .\js\gen.js .\js\helper.js .\js\items.js .\js\physics.js .\js\w.js .\js\zzfx.js .\js\main.js --output dist/bundle.js --compress toplevel --mangle toplevel --toplevel
 Set-Location .\dist
 $tersersize = Get-Item .\bundle.js
 npx roadroller bundle.js -o bundle.js
 $roadrollersize = Get-Item .\bundle.js
 Set-Location ../
-$assetsize = Get-Item .\assets
+$assetsize = Get-Item .\assets\*
 Remove-Item .\dist\assets -Recurse
 Copy-Item .\assets .\dist\assets -Recurse
 Compress-Archive dist/* bundle.zip -Force -CompressionLevel Optimal

@@ -7,6 +7,8 @@ let cactis = 0
 
 
 function generateWorld() {
+    loot = [Meat, Meat, Wrench]
+
     W.add("big_rock", {
         vertices: [...'[5|a,~1b+},7\\8[5==II|0;I;4?7F0;I\nH\n...'].map(a => (a.codePointAt()) / 127),
         uv: [...'HO H O@H@O_H_H@0@0__o@@0@_0 @@@0@ OOo_'].map(a => (a.codePointAt()) / 127),
@@ -83,10 +85,26 @@ function generateCactus(x, y, ry = Math.random() * 360) {
     return "cacti" + (cactis - 1)
 }
 
+let loot
+
 let gasstations = []
 
 function generateGasStation(pos) {
     let name = "gasstation" + gasstations.length
+
+    for (let i = 0; i<Math.random() * 2; i++) {
+        let bot
+        if (Math.round(Math.random())) {
+            bot = new Ball
+        } else {
+            bot = new Mouser
+        }
+
+        bot.spawn(new Vec2(Math.random()* 30 - 15, Math.random()*30 -15).add(pos))
+
+        robots.push(bot)
+    }
+
     W.group({ n: name, x: pos.x, z: pos.y })
     W.sphere({ g: name })
     W.plane({ y: .1, g: name, x: 15, z: 10, w: 30, h: 20, rx: -90 })
@@ -129,14 +147,26 @@ function generateGasStation(pos) {
     gasstations.push({ name, pos, inside })
 
     //generate the items inside
-    new Meat().drop(buildingmin.add(new Vec2(5, 5)))
 
-
+    new loot[Math.round(Math.random()) * (loot.length -1)]().drop(new Vec2(5,5).add(buildingmin))
 }
 
 let buildings = []
 
 function generateHouse(pos) {
+    for (let i = 0; i<Math.random() * 2; i++) {
+        let bot
+        if (Math.round(Math.random())) {
+            bot = new Ball
+        } else {
+            bot = new Mouser
+        }
+
+        bot.spawn(new Vec2(Math.random()* 30 - 15, Math.random()*30 -15).add(pos))
+
+        robots.push(bot)
+    }
+
     let name = "building" + buildings.length
     W.group({ n: name, x: pos.x, z: pos.y })
     W.cube({ g: name, w: 10, d: 15, h: 7 }) // cube that makes the body of the building
@@ -168,11 +198,12 @@ function generateHouse(pos) {
     buildings.push({ name, pos, inside, doorpos })
 
     //generate the items inside
-    new Meat().drop(buildingmin.add(new Vec2(5, 5)))
-
+    new loot[Math.round(Math.random()) * (loot.length -1)]().drop(new Vec2(5,5).add(buildingmin))
 }
 
 let obstaclepointer = 0
+
+let structuregen = 0
 
 function updateWorld() {
     gasstations.forEach(val => {
@@ -191,8 +222,8 @@ function updateWorld() {
                 currentAction = {
                     importance: distance, text: "Press E to leave gas station", callback: () => {
                         place = false
-                        W.light({ x: -0.5, y: -.5, z: -0.7 })
-                        W.ambient(1)
+                        W.light(normalLight)
+                        W.ambient(normalAmbient)
                     }
                 }
             }
@@ -200,7 +231,7 @@ function updateWorld() {
             currentAction = {
                 importance: distanceFromTank, text: "Hold E to fill up gas tank", callback: () => {
                     cars.forEach(car => {
-                        if (car.pos.distance(val.pos.add(new Vec2(6, 4))) < 7) car.fuel = Math.min(car.fuel + 0.1 * fpsfix, car.maxFuel)
+                        if (car.pos.distance(val.pos.add(new Vec2(6, 4))) < 15) car.fuel = Math.min(car.fuel + 0.1 * fpsfix, car.maxFuel)
                     })
                 }
             }
@@ -222,13 +253,22 @@ function updateWorld() {
                     currentAction = {
                         importance: distance, text: "Press E to leave building", callback: () => {
                             place = false
-                            W.light({ x: -0.5, y: -.5, z: -0.7 })
-                            W.ambient(1)
+                            W.light(normalLight)
+                            W.ambient(normalAmbient)
                         }
                     }
                 }
             } 
     })
+
+    if (player.pos.x > structuregen) {
+        structuregen += Math.random() * 1000 + 100
+        if (Math.round(Math.random())) {
+            generateGasStation(new Vec2(structuregen, Math.random()* 200 + 20))
+        } else {
+            generateHouse(new Vec2(structuregen, Math.random() * 700 - 350))
+        }
+    }
 
     if (obstaclearray.length > obstaclepointer && obstaclearray[obstaclepointer][0] - player.pos.x < 700) {
         let choices = [generateCactus, generateRock]

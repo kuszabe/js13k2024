@@ -3,7 +3,13 @@ c.width = innerWidth
 
 let game = false
 
-let renderdistance = 1000
+let renderdistance = 10
+
+let normalLight = { x: -0.3, y: -.5, z: -0.3 }
+
+let normalAmbient = 0.7
+
+
 
 onresize = () => {
     c.height = innerHeight
@@ -18,13 +24,13 @@ W.camera({ y: 20, x: -20, ry: -90, fov: 45 })
 
 W.plane({ n: "ground", size: 1200, rx: -90, b: "#C2B280" })
 
-W.ambient(0.7)
+W.ambient(normalAmbient)
 
-W.light({ x: -0.3, y: -.5, z: -0.3 })
+W.light(normalLight)
 
 // W.plane({g:"camera", z:-1, rx:-20, y:-1, size:2, ns:1, t:upscaleImage(meatsource)})
 
-const nothingAction = { importance: Infinity, callback: () => { console.log("hello") }, text: "" }
+const nothingAction = { importance: Infinity, callback: () => {}, text: "" }
 
 const leaveCarAction = { text: "press E to leave the car", callback: leaveCar, importance: -1 }
 
@@ -52,7 +58,6 @@ onkeyup = (e) => {
 onclick = () => {
     if (!document.pointerLockElement && game) document.body.requestPointerLock()
     if (player.equippedItem) {
-        console.log("megnyomtak")
         player.equippedItem.use()
         updateHotbar()
     }
@@ -68,23 +73,39 @@ const player = {
     rotationX: 0,
     rotationY: 0,
     pos: new Vec2(),
-    speed: 0.2,
+    speed: 0.1,
     currentCar: null,
     collider: polygon(),
     hunger: 5,
     addHunger(amount) {
         this.hunger = clamp(this.hunger + amount, 0, 10)
-        hungerdisplay.innerText = this.hunger
-        if (this.hunger == 0) hungerdisplay.innerText = "you died"
+        hungerdisplay.innerText = this.hunger.toFixed(1)
+        if (this.hunger == 0) player.damage(2)
     },
     equippedItem: null,
     selectedInventorySlot: 0,
-    inventory: []
+    inventory: [],
+    health: 10,
+    maxHealth: 10,
+    heal(amount) {
+        this.health = Math.min(this.maxHealth, this.health + amount)
+        healthdisplay.innerText = this.health.toFixed(1)
+    },
+    damage(amount) {
+        this.health -= amount
+        healthdisplay.innerText = this.health.toFixed(1)
+        zzfx(...[,,925,.04,.3,.6,1,.3,,6.27,-184,.09,.17])
+        if (this.health <= 0) {
+            game = false
+            document.write("<h1>You fucking died</h1>")
+        }
+    },
 }
 
 setInterval(() => {
-    player.addHunger(-1)
-}, 60000);
+    player.addHunger(-0.1)
+    player.heal(0.1)
+}, 6000);
 
 player.addHunger(2)
 
@@ -131,7 +152,8 @@ const maincar = {
     turn: 1,
     fuel: 10,
     maxFuel: 20,
-    maxVelocity: 0.6
+    maxVelocity: 0.6,
+    broken: true
 }
 
 const secondarycar = {
@@ -147,16 +169,10 @@ const secondarycar = {
     fuel: 10,
     maxFuel: 60,
     maxVelocity: 0.7,
+    broken: false
 }
 
 let cars = [maincar, secondarycar]
-
-function moveTowardsValue(target, current, acceleration) {
-    if (Math.abs(target - current) < acceleration) return target
-    if (target > current) current += acceleration
-    else if (target < current) current -= acceleration
-    return current
-}
 
 function enterCar(car) {
     // W.move({
@@ -171,6 +187,7 @@ function leaveCar() {
     player.pos.x = player.currentCar.pos.x + 5
     player.pos.y = player.currentCar.pos.y + 5
     player.currentCar = null
+    carinfo.innerText = ""
 }
 
 // setInterval(() => {
@@ -187,10 +204,10 @@ function updateCar(car) {
 
 
         //car acceleration
-        if (car.fuel > 0) car.velocity += (controls.w - controls.s) * car.acceleration / Math.max(Math.abs(car.turn), 1)
-        else car.fuel = 0
+        if (car.fuel > 0 && !car.broken) car.velocity += (controls.w - controls.s) * car.acceleration / Math.max(Math.abs(car.turn), 1)
 
         car.fuel -= Math.abs(car.velocity / 60 * fpsfix * car.fuelconsumption)
+        if (car.fuel < 0) car.fuel = 0
 
         carinfo.innerText = car.fuel.toFixed(2) + "/" + car.maxFuel
 
@@ -232,12 +249,38 @@ function updateCar(car) {
         player.pos.y = car.pos.y
     }
 
-    W.move({ n: "camera", x: player.pos.x, z: player.pos.y, ry: player.rotationX, rx: player.rotationY })
-
+    
     W.move({ n: car.name, ry: car.rotation, x: car.pos.x, z: car.pos.y })
+    
+    W.camera({x:player.pos.x, z:player.pos.y,  ry: player.rotationX, rx: player.rotationY})
+
+    if (car.broken && time % Math.round(60 / fpsfix) == 0) {
+        let pos = new Vec2(car.pos.x - Math.sin(car.rotation * Math.PI / 180) * 2.3, car.pos.y - Math.cos(car.rotation * Math.PI / 180) * 2.3)
+        pos.x += Math.random()*2-1
+        pos.y += Math.random()*2-1
+        smokeParticle(pos.x, 2, pos.y)
+    }
+    //playing the sound made the car glitch and it sounded terrible
+    // if (time % (30 / Math.round(fpsfix)) == 0) zzfx(1,0,200,.01,0,0,1,1,.3,0,0,0,.01,1.8,40,0,0,1,0.5,.17,0); // Engine sound
+}
+
+upscaleImage(meatsource)
+upscaleImage(wrench)
+upscaleImage(smokesource1)
+upscaleImage(smokesource2)
+
+const smokeTextures = [
+    smokesource1,
+    smokesource2
+]
 
 
-
+function smokeParticle(x,y,z) {
+    let n = "smoke" + time
+    const i = Math.round(Math.random())
+    W.billboard({x,y,z, n, t:smokeTextures[i]})
+    W.move({n, y:y+3, a: 3000})
+    setTimeout(() => W.delete(n), 3000)
 }
 
 //#endregion car
@@ -262,6 +305,7 @@ function update(timeStamp) {
 
     //fpsfix is a variable that should be 1 when the game is running at 60 fps
     //multiplying every movement with fpsfix fixes the game slowing down or speeding up when running at different framerates
+    //it was my lazy way of implementing deltatime
 
     time++
 
@@ -272,17 +316,21 @@ function update(timeStamp) {
         disasterTriggerPoint += 1300
     }
 
+    let curSpeed = player.speed * (controls.Shift ? 2 : 1)
+
     if (controls.w || controls.s) {
-        player.pos.x -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) * player.speed * fpsfix
-        player.pos.y -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) * player.speed * fpsfix
+        player.pos.x -= (controls.w - controls.s) * Math.sin(player.rotationX * Math.PI / 180) * curSpeed * fpsfix
+        player.pos.y -= (controls.w - controls.s) * Math.cos(player.rotationX * Math.PI / 180) * curSpeed * fpsfix
     }
     if (controls.a || controls.d) {
-        player.pos.x -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) * player.speed * fpsfix
-        player.pos.y -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) * player.speed * fpsfix
+        player.pos.x -= (controls.a - controls.d) * Math.sin((player.rotationX + 90) * Math.PI / 180) * curSpeed * fpsfix
+        player.pos.y -= (controls.a - controls.d) * Math.cos((player.rotationX + 90) * Math.PI / 180) * curSpeed * fpsfix
     }
 
     W.move({ n: "ground", x: player.pos.x, z: player.pos.y })
     W.move({ n: "road", x: player.pos.x, })
+
+    robots.forEach(e => e.update())
 
 
     if (currentAction.importance >= 0) {
@@ -298,8 +346,6 @@ function update(timeStamp) {
             }
         })
     }
-
-    // if (time % 100 == 0) zzfx(1,0,200,.01,0,0,1,1,.3,0,0,0,.01,1.8,40,0,0,1,10,.17,0); // Engine sound
 
     for (let i = 0; i < 7; i++) {
         if (controls[i + 1]) {
@@ -331,18 +377,17 @@ function update(timeStamp) {
     updateWorld()
     if (game) requestAnimationFrame(update)
 }
+droidsInit()
 
 generateWorld()
 
 physicsInit()
 
-let meat = new Meat
-meat.drop(new Vec2(-5, 2))
+new Meat().drop(new Vec2())
 
-let meat2 = new Meat
-meat2.drop(new Vec2(-5, 0))
 
 start.onclick = () => {
+
     mainmenu.style.display = "none"
 
     hud.style.display = "block"
@@ -360,5 +405,5 @@ start.onclick = () => {
     //start the game loop
     requestAnimationFrame(update)
 
-
+    // thunderStorm.start()
 }

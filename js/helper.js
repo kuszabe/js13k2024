@@ -15,16 +15,12 @@ function moveTowardsValue(target, current, acceleration) {
 function moveTowardsValueLoop(target, current, acceleration, loop) {
     if (Math.abs(target - current) < acceleration) return target
     if (Math.abs(target - current) > Math.abs(target+loop - current)) {
-        console.log("before", current, target)
         current += acceleration
         current = current % loop
-        console.log("after", current, target)
     }
     else if (Math.abs(target - current) > Math.abs((loop-target) - current)) {
-        console.log("before", current, target)
         current -= acceleration
         current = loop + current
-        console.log("after", current, target)
     }
     else if (target > current) current += acceleration
     else if (target < current) current -= acceleration
